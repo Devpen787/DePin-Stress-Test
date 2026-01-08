@@ -16,6 +16,9 @@ export function formatCompact(n: number): string {
   if (Math.abs(n) >= 1_000) {
     return `${(n / 1_000).toFixed(1)}K`;
   }
+  if (Math.abs(n) < 10 && Math.abs(n) > 0) {
+    return n.toFixed(2);
+  }
   return n.toFixed(0);
 }
 

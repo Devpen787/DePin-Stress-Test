@@ -1,0 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 11 17 32; /* #0b1120 Deep Navy */
+    --foreground: 248 250 252; /* #f8fafc White */
+  }
+
+  body {
+    @apply bg-slate-950 text-slate-50 antialiased font-sans selection:bg-indigo-500/30 selection:text-indigo-200;
+  }
+
+  /* Custom Scrollbar for "Cockpit" feel */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-slate-950;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-slate-800 rounded-full hover:bg-slate-700 transition-colors;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+/* Scrollytelling Animations */
+.scrolly-card {
+  @apply transition-all duration-500 ease-in-out;
+}
+.scrolly-active {
+  @apply opacity-100 translate-y-0 filter-none;
+}
+.scrolly-inactive {
+  @apply opacity-30 translate-y-4 blur-sm grayscale;
+}

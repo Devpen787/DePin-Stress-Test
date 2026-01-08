@@ -12,21 +12,26 @@ import type { SimulationParams, ParamDocumentation, ProtocolProfileV1 } from './
 export const DEFAULT_PARAMS: SimulationParams = {
   // Time
   T: 52,                                // 1 year simulation
-  
+
   // Tokenomics
   initialSupply: 100_000_000,           // 100M tokens
   initialPrice: 3.0,                    // $3 per token
   maxMintWeekly: 250_000,               // 250K tokens/week max emissions
   burnPct: 0.65,                        // 65% of spent tokens burned
-  
+
+  // Liquidity & Investor Unlock (Module 3)
+  initialLiquidity: 50_000,             // $50k (Thin Liquidity Test)
+  investorUnlockWeek: 26,               // Week 26 Cliff
+  investorSellPct: 0.15,                // 15% Supply Dump
+
   // Demand
   demandType: 'growth',
   baseDemand: 12_000,                   // Base demand units per week
   demandVolatility: 0.05,               // 5% demand noise
-  
+
   // Macro
   macro: 'sideways',
-  
+
   // Provider Economics
   initialProviders: 30,                 // Start with 30 providers
   baseCapacityPerProvider: 180,         // 180 units per provider
@@ -38,25 +43,26 @@ export const DEFAULT_PARAMS: SimulationParams = {
   profitThresholdToJoin: 15,            // Join if expected profit > $15/week
   maxProviderGrowthRate: 0.15,          // Max 15% growth per week
   maxProviderChurnRate: 0.10,           // Max 10% churn per week
-  
+
   // Price Sensitivity Coefficients
   kBuyPressure: 0.08,                   // Buy pressure coefficient
   kSellPressure: 0.12,                  // Sell pressure coefficient (providers selling)
   kDemandPrice: 0.15,                   // Demand/scarcity coefficient
   kMintPrice: 0.35,                     // Dilution coefficient
-  
+
   // Service Pricing
   baseServicePrice: 0.5,                // $0.50 per unit
   servicePriceElasticity: 0.6,          // How fast price adjusts
   minServicePrice: 0.05,                // $0.05 floor
   maxServicePrice: 5.0,                 // $5.00 ceiling
-  
+
   // Reward Mechanics
   rewardLagWeeks: 6,                    // 6 week reward delay
-  
+
   // Simulation
   nSims: 100,                           // 100 Monte Carlo runs
   seed: 42,                             // Default seed
+  scenario: 'baseline',                 // Default scenario
 };
 
 // ============================================================================
@@ -74,7 +80,18 @@ export const PARAM_DOCS: Record<keyof SimulationParams, ParamDocumentation> = {
     impact: 'Longer simulations show equilibrium states and long-term sustainability.',
     category: 'time',
   },
-  
+
+  scenario: {
+    name: 'Thesis Scenario',
+    description: 'Pre-configured stress test scenarios from the Research Plan. Overrides standard simulation logic.',
+    unit: 'mode',
+    min: 0,
+    max: 0,
+    default: 0,
+    impact: 'Base: Organic. Winter: -90% Price. Saturation: 3x Nodes. Utility: High Growth.',
+    category: 'simulation',
+  },
+
   initialSupply: {
     name: 'Initial Supply',
     description: 'Starting circulating token supply. Higher supply means more liquidity but potential dilution concerns.',
@@ -85,7 +102,7 @@ export const PARAM_DOCS: Record<keyof SimulationParams, ParamDocumentation> = {
     impact: 'Affects token price sensitivity and emission ratios.',
     category: 'tokenomics',
   },
-  
+
   initialPrice: {
     name: 'Initial Price',
     description: 'Starting token price in USD. Sets the baseline for measuring returns and provider economics.',
@@ -96,7 +113,7 @@ export const PARAM_DOCS: Record<keyof SimulationParams, ParamDocumentation> = {
     impact: 'Higher prices mean higher provider rewards in USD terms.',
     category: 'tokenomics',
   },
-  
+
   maxMintWeekly: {
     name: 'Max Weekly Emissions',
     description: 'Maximum tokens minted per week as provider rewards. Controls inflation rate.',
@@ -107,7 +124,7 @@ export const PARAM_DOCS: Record<keyof SimulationParams, ParamDocumentation> = {
     impact: 'Higher emissions attract providers but dilute token value.',
     category: 'tokenomics',
   },
-  
+
   burnPct: {
     name: 'Burn Percentage',
     description: 'Fraction of tokens spent on services that are permanently burned. Key deflationary mechanism.',
@@ -118,7 +135,40 @@ export const PARAM_DOCS: Record<keyof SimulationParams, ParamDocumentation> = {
     impact: 'Higher burn creates deflation, countering emission inflation.',
     category: 'tokenomics',
   },
-  
+
+  initialLiquidity: {
+    name: 'Initial Liquidity (Depth)',
+    description: 'Initial USD value in the liquidity pool. Determines market depth and slippage.',
+    unit: 'USD',
+    min: 10_000,
+    max: 10_000_000,
+    default: 50_000,
+    impact: 'Higher liquidity reduces price crash severity during unlock events.',
+    category: 'tokenomics',
+  },
+
+  investorUnlockWeek: {
+    name: 'Investor Unlock Week',
+    description: 'The simulation week when investor tokens unlock and are sold.',
+    unit: 'week',
+    min: 1,
+    max: 104,
+    default: 26,
+    impact: 'Determines when the liquidity shock hits the market.',
+    category: 'tokenomics',
+  },
+
+  investorSellPct: {
+    name: 'Investor Sell %',
+    description: 'Percentage of total supply sold by investors at unlock.',
+    unit: 'decimal (0-1)',
+    min: 0,
+    max: 0.5,
+    default: 0.15,
+    impact: 'Higher percentage causes massive sell pressure and price crashes.',
+    category: 'tokenomics',
+  },
+
   demandType: {
     name: 'Demand Regime',
     description: 'Shape of the demand curve over time. Simulates different market adoption scenarios.',
@@ -129,7 +179,7 @@ export const PARAM_DOCS: Record<keyof SimulationParams, ParamDocumentation> = {
     impact: 'Growth = adoption curve, Volatile = uncertain market, Decay = fading interest.',
     category: 'demand',
   },
-  
+
   baseDemand: {
     name: 'Base Demand',
     description: 'Baseline weekly demand for network services in units.',
@@ -140,7 +190,7 @@ export const PARAM_DOCS: Record<keyof SimulationParams, ParamDocumentation> = {
     impact: 'Higher demand increases utilisation and token burn.',
     category: 'demand',
   },
-  
+
   demandVolatility: {
     name: 'Demand Volatility',
     description: 'Standard deviation of demand noise as a fraction of base demand.',
@@ -151,7 +201,7 @@ export const PARAM_DOCS: Record<keyof SimulationParams, ParamDocumentation> = {
     impact: 'Higher volatility creates more uncertain revenue for providers.',
     category: 'demand',
   },
-  
+
   macro: {
     name: 'Macro Condition',
     description: 'Overall market sentiment affecting token price drift.',
@@ -162,7 +212,7 @@ export const PARAM_DOCS: Record<keyof SimulationParams, ParamDocumentation> = {
     impact: 'Bearish = downward drift, Bullish = upward drift, Sideways = neutral.',
     category: 'macro',
   },
-  
+
   initialProviders: {
     name: 'Initial Providers',
     description: 'Number of providers at simulation start.',
@@ -173,7 +223,7 @@ export const PARAM_DOCS: Record<keyof SimulationParams, ParamDocumentation> = {
     impact: 'More providers = more capacity but rewards spread thinner.',
     category: 'provider',
   },
-  
+
   baseCapacityPerProvider: {
     name: 'Base Capacity per Provider',
     description: 'Average service units each provider can deliver per week.',
@@ -184,7 +234,7 @@ export const PARAM_DOCS: Record<keyof SimulationParams, ParamDocumentation> = {
     impact: 'Higher capacity means fewer providers needed to meet demand.',
     category: 'provider',
   },
-  
+
   capacityStdDev: {
     name: 'Capacity Std Dev',
     description: 'Heterogeneity in provider capacity as fraction of base.',
@@ -195,7 +245,7 @@ export const PARAM_DOCS: Record<keyof SimulationParams, ParamDocumentation> = {
     impact: 'Higher values create more diverse provider economics.',
     category: 'provider',
   },
-  
+
   providerCostPerWeek: {
     name: 'Provider Weekly Cost',
     description: 'Average operational expense per provider per week (electricity, hardware, etc.).',
@@ -206,7 +256,7 @@ export const PARAM_DOCS: Record<keyof SimulationParams, ParamDocumentation> = {
     impact: 'Higher costs require higher rewards to retain providers.',
     category: 'provider',
   },
-  
+
   costStdDev: {
     name: 'Cost Std Dev',
     description: 'Heterogeneity in provider costs as fraction of base.',
@@ -217,7 +267,7 @@ export const PARAM_DOCS: Record<keyof SimulationParams, ParamDocumentation> = {
     impact: 'Higher values mean some providers are more efficient than others.',
     category: 'provider',
   },
-  
+
   hardwareLeadTime: {
     name: 'Hardware Lead Time',
     description: 'Weeks delay before new providers can start earning rewards.',
@@ -228,7 +278,7 @@ export const PARAM_DOCS: Record<keyof SimulationParams, ParamDocumentation> = {
     impact: 'Longer lead times slow network growth response to demand.',
     category: 'provider',
   },
-  
+
   churnThreshold: {
     name: 'Churn Threshold',
     description: 'Minimum weekly profit below which providers consider leaving.',
@@ -239,7 +289,7 @@ export const PARAM_DOCS: Record<keyof SimulationParams, ParamDocumentation> = {
     impact: 'Lower threshold makes providers more tolerant of low profits.',
     category: 'provider',
   },
-  
+
   profitThresholdToJoin: {
     name: 'Join Profit Threshold',
     description: 'Minimum expected weekly profit to attract new providers.',
@@ -250,7 +300,7 @@ export const PARAM_DOCS: Record<keyof SimulationParams, ParamDocumentation> = {
     impact: 'Higher threshold makes it harder to attract new providers.',
     category: 'provider',
   },
-  
+
   maxProviderGrowthRate: {
     name: 'Max Provider Growth Rate',
     description: 'Maximum percentage of provider count that can join per week.',
@@ -261,7 +311,7 @@ export const PARAM_DOCS: Record<keyof SimulationParams, ParamDocumentation> = {
     impact: 'Simulates hardware lead times and market friction.',
     category: 'provider',
   },
-  
+
   maxProviderChurnRate: {
     name: 'Max Provider Churn Rate',
     description: 'Maximum percentage of providers that can leave per week.',
@@ -272,7 +322,7 @@ export const PARAM_DOCS: Record<keyof SimulationParams, ParamDocumentation> = {
     impact: 'Higher values allow faster network collapse under stress.',
     category: 'provider',
   },
-  
+
   kBuyPressure: {
     name: 'Buy Pressure Coefficient',
     description: 'How much user token purchases affect price.',
@@ -283,7 +333,7 @@ export const PARAM_DOCS: Record<keyof SimulationParams, ParamDocumentation> = {
     impact: 'Higher values make price more responsive to service demand.',
     category: 'price',
   },
-  
+
   kSellPressure: {
     name: 'Sell Pressure Coefficient',
     description: 'How much provider token sales affect price.',
@@ -294,7 +344,7 @@ export const PARAM_DOCS: Record<keyof SimulationParams, ParamDocumentation> = {
     impact: 'Higher values make price drop more when providers sell.',
     category: 'price',
   },
-  
+
   kDemandPrice: {
     name: 'Demand-Price Coefficient',
     description: 'How much demand scarcity affects token price.',
@@ -305,7 +355,7 @@ export const PARAM_DOCS: Record<keyof SimulationParams, ParamDocumentation> = {
     impact: 'Higher values create stronger demand-driven price movements.',
     category: 'price',
   },
-  
+
   kMintPrice: {
     name: 'Mint-Price Coefficient',
     description: 'How much token minting dilutes the price.',
@@ -316,7 +366,7 @@ export const PARAM_DOCS: Record<keyof SimulationParams, ParamDocumentation> = {
     impact: 'Higher values make emissions more dilutive to price.',
     category: 'price',
   },
-  
+
   baseServicePrice: {
     name: 'Base Service Price',
     description: 'Starting price per unit of service.',
@@ -327,7 +377,7 @@ export const PARAM_DOCS: Record<keyof SimulationParams, ParamDocumentation> = {
     impact: 'Higher prices mean more token burn but may reduce demand.',
     category: 'service',
   },
-  
+
   servicePriceElasticity: {
     name: 'Service Price Elasticity',
     description: 'How quickly service price responds to scarcity.',
@@ -338,7 +388,7 @@ export const PARAM_DOCS: Record<keyof SimulationParams, ParamDocumentation> = {
     impact: 'Higher values cause more volatile service pricing.',
     category: 'service',
   },
-  
+
   minServicePrice: {
     name: 'Min Service Price',
     description: 'Floor for service price.',
@@ -349,7 +399,7 @@ export const PARAM_DOCS: Record<keyof SimulationParams, ParamDocumentation> = {
     impact: 'Prevents service from becoming too cheap.',
     category: 'service',
   },
-  
+
   maxServicePrice: {
     name: 'Max Service Price',
     description: 'Ceiling for service price.',
@@ -360,7 +410,7 @@ export const PARAM_DOCS: Record<keyof SimulationParams, ParamDocumentation> = {
     impact: 'Prevents service from becoming prohibitively expensive.',
     category: 'service',
   },
-  
+
   rewardLagWeeks: {
     name: 'Reward Lag',
     description: 'Weeks delay between service provision and reward receipt.',
@@ -371,7 +421,7 @@ export const PARAM_DOCS: Record<keyof SimulationParams, ParamDocumentation> = {
     impact: 'Longer lag creates cash flow challenges for providers.',
     category: 'provider',
   },
-  
+
   nSims: {
     name: 'Monte Carlo Runs',
     description: 'Number of simulation runs for statistical confidence.',
@@ -382,7 +432,7 @@ export const PARAM_DOCS: Record<keyof SimulationParams, ParamDocumentation> = {
     impact: 'More runs = better statistics but slower computation.',
     category: 'simulation',
   },
-  
+
   seed: {
     name: 'Random Seed',
     description: 'Seed for random number generator. Same seed = reproducible results.',
@@ -407,6 +457,7 @@ export const PROTOCOL_PROFILES: ProtocolProfileV1[] = [
       name: 'ONO',
       mechanism: 'Fixed Emissions w/ Partial Burn',
       notes: 'Expert calibrated based on 2024 interviews. Low node count target (30-100).',
+      model_type: 'location_based',
       source: 'Interview-Derived',
     },
     parameters: {
@@ -428,6 +479,7 @@ export const PROTOCOL_PROFILES: ProtocolProfileV1[] = [
       name: 'Helium-like',
       mechanism: 'Burn-and-Mint Equilibrium',
       notes: 'Modelled after BME structures. High node count capability. 100% burn of service fees.',
+      model_type: 'location_based',
       source: 'Placeholder-Derived',
     },
     parameters: {
@@ -449,6 +501,7 @@ export const PROTOCOL_PROFILES: ProtocolProfileV1[] = [
       name: 'Adaptive',
       mechanism: 'Algorithmic Supply Adjustment',
       notes: 'Elastic supply protocol. Low opex threshold node operations.',
+      model_type: 'fungible_resource',
       source: 'Placeholder-Derived',
     },
     parameters: {
@@ -470,6 +523,7 @@ export const PROTOCOL_PROFILES: ProtocolProfileV1[] = [
       name: 'Death Spiral',
       mechanism: 'Stress Test Scenario',
       notes: 'Designed to trigger protocol failure. High costs, low burn, bearish conditions.',
+      model_type: 'fungible_resource',
       source: 'Placeholder-Derived',
     },
     parameters: {
@@ -500,11 +554,11 @@ export function getParamTooltip(key: keyof SimulationParams): string {
  */
 export function validateParams(params: SimulationParams): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
-  
+
   for (const [key, value] of Object.entries(params)) {
     const doc = PARAM_DOCS[key as keyof SimulationParams];
     if (!doc) continue;
-    
+
     if (typeof value === 'number') {
       if (value < doc.min) {
         errors.push(`${doc.name} (${value}) is below minimum (${doc.min})`);
@@ -514,7 +568,7 @@ export function validateParams(params: SimulationParams): { valid: boolean; erro
       }
     }
   }
-  
+
   return { valid: errors.length === 0, errors };
 }
 

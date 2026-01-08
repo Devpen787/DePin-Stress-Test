@@ -12,6 +12,7 @@ export interface TokenMarketData {
   name: string;
   currentPrice: number;
   marketCap: number;
+  totalVolume: number;
   circulatingSupply: number;
   totalSupply: number;
   maxSupply: number | null;
@@ -63,78 +64,120 @@ export const COINGECKO_TOKEN_IDS: Record<string, string> = {
 
 // Comprehensive DePIN token database
 export const DEPIN_TOKENS: Record<string, DePINTokenInfo> = {
-  'onocoy-token': { 
-    name: 'ONOCOY', 
-    symbol: 'ONO', 
-    category: 'GPS/GNSS',
-    coingeckoId: 'onocoy-token',
-    description: 'Decentralised RTK correction network for precision positioning',
-    website: 'https://onocoy.com',
+  'helium-mobile': {
+    name: 'Helium Mobile',
+    symbol: 'MOBILE',
+    category: 'Wireless',
+    coingeckoId: 'helium-mobile',
+    description: '5G carrier on the Helium Network',
+    website: 'https://hellohelium.com',
   },
-  'helium': { 
-    name: 'Helium', 
-    symbol: 'HNT', 
+  'nosana': {
+    name: 'Nosana',
+    symbol: 'NOS',
+    category: 'AI/ML',
+    coingeckoId: 'nosana',
+    description: 'Decentralized GPU grid for AI inference',
+    website: 'https://nosana.io',
+  },
+  'shadow-token': {
+    name: 'Shadow',
+    symbol: 'SHDW',
+    category: 'Storage',
+    coingeckoId: 'shadow-token',
+    description: 'Decentralized storage and compute (GenesysGo)',
+    website: 'https://www.genesysgo.com/',
+  },
+  'iotex': {
+    name: 'IoTeX',
+    symbol: 'IOTX',
+    category: 'Sensors',
+    coingeckoId: 'iotex',
+    description: 'EVM-compatible blockchain for IoT',
+    website: 'https://iotex.io',
+  },
+  'aleph': {
+    name: 'Aleph.im',
+    symbol: 'ALEPH',
+    category: 'Compute',
+    coingeckoId: 'aleph',
+    description: 'Cross-chain storage and computing network',
+    website: 'https://aleph.im',
+  },
+  'grass': {
+    name: 'Grass',
+    symbol: 'GRASS',
+    category: 'AI/ML',
+    coingeckoId: 'wynd',  // Usually Wynd Network / Grass
+    description: 'Decentralized web scraping network',
+    website: 'https://getgrass.io',
+  },
+
+  'helium': {
+    name: 'Helium',
+    symbol: 'HNT',
     category: 'IoT/Wireless',
     coingeckoId: 'helium',
     description: 'Decentralised wireless network for IoT devices',
     website: 'https://helium.com',
   },
-  'render-token': { 
-    name: 'Render', 
-    symbol: 'RNDR', 
+  'onocoy-token': {
+    name: 'ONOCOY',
+    symbol: 'ONO',
+    category: 'Sensor',
+    coingeckoId: 'onocoy-token',
+    description: 'GNSS reference station network',
+    website: 'https://onocoy.com',
+  },
+  'render-token': {
+    name: 'Render',
+    symbol: 'RNDR',
     category: 'GPU Computing',
     coingeckoId: 'render-token',
     description: 'Distributed GPU rendering network',
     website: 'https://rendernetwork.com',
   },
-  'filecoin': { 
-    name: 'Filecoin', 
-    symbol: 'FIL', 
+  'filecoin': {
+    name: 'Filecoin',
+    symbol: 'FIL',
     category: 'Storage',
     coingeckoId: 'filecoin',
     description: 'Decentralised storage network',
     website: 'https://filecoin.io',
   },
-  'theta-token': { 
-    name: 'Theta', 
-    symbol: 'THETA', 
+  'theta-token': {
+    name: 'Theta',
+    symbol: 'THETA',
     category: 'Video/CDN',
     coingeckoId: 'theta-token',
     description: 'Decentralised video delivery network',
     website: 'https://thetatoken.org',
   },
-  'akash-network': { 
-    name: 'Akash', 
-    symbol: 'AKT', 
+  'akash-network': {
+    name: 'Akash',
+    symbol: 'AKT',
     category: 'Cloud Computing',
     coingeckoId: 'akash-network',
     description: 'Decentralised cloud computing marketplace',
     website: 'https://akash.network',
   },
-  'hivemapper': { 
-    name: 'Hivemapper', 
-    symbol: 'HONEY', 
+  'hivemapper': {
+    name: 'Hivemapper',
+    symbol: 'HONEY',
     category: 'Mapping',
     coingeckoId: 'hivemapper',
     description: 'Decentralised mapping network using dashcams',
     website: 'https://hivemapper.com',
   },
-  'dimo': { 
-    name: 'DIMO', 
-    symbol: 'DIMO', 
+  'dimo': {
+    name: 'DIMO',
+    symbol: 'DIMO',
     category: 'Vehicle Data',
     coingeckoId: 'dimo',
     description: 'User-owned vehicle data network',
     website: 'https://dimo.zone',
   },
-  'iotex': {
-    name: 'IoTeX',
-    symbol: 'IOTX',
-    category: 'IoT/Blockchain',
-    coingeckoId: 'iotex',
-    description: 'IoT-focused blockchain platform',
-    website: 'https://iotex.io',
-  },
+
   'arweave': {
     name: 'Arweave',
     symbol: 'AR',
@@ -172,9 +215,9 @@ export function loadFromLocalStorage(): {
   try {
     const dataStr = localStorage.getItem(STORAGE_KEY);
     const timestampStr = localStorage.getItem(STORAGE_TIMESTAMP_KEY);
-    
+
     if (!dataStr) return { data: null, timestamp: null };
-    
+
     return {
       data: JSON.parse(dataStr),
       timestamp: timestampStr ? new Date(timestampStr) : null,
@@ -210,20 +253,21 @@ export async function fetchTokenData(tokenId: string): Promise<TokenMarketData |
     const response = await fetch(
       `${COINGECKO_BASE_URL}/coins/${tokenId}?localization=false&tickers=false&community_data=false&developer_data=false&sparkline=true`
     );
-    
+
     if (!response.ok) {
       console.error(`CoinGecko API error: ${response.status}`);
       return null;
     }
-    
+
     const data = await response.json();
-    
+
     return {
       id: data.id,
       symbol: data.symbol?.toUpperCase(),
       name: data.name,
       currentPrice: data.market_data?.current_price?.usd || 0,
       marketCap: data.market_data?.market_cap?.usd || 0,
+      totalVolume: data.market_data?.total_volume?.usd || 0,
       circulatingSupply: data.market_data?.circulating_supply || 0,
       totalSupply: data.market_data?.total_supply || 0,
       maxSupply: data.market_data?.max_supply,
@@ -249,20 +293,20 @@ export async function fetchTokenData(tokenId: string): Promise<TokenMarketData |
  */
 export async function fetchMultipleTokens(tokenIds: string[]): Promise<Record<string, TokenMarketData>> {
   const results: Record<string, TokenMarketData> = {};
-  
+
   try {
     const ids = tokenIds.join(',');
     const response = await fetch(
       `${COINGECKO_BASE_URL}/coins/markets?vs_currency=usd&ids=${ids}&order=market_cap_desc&sparkline=true&price_change_percentage=24h,7d,30d`
     );
-    
+
     if (!response.ok) {
       console.error(`CoinGecko API error: ${response.status}`);
       return results;
     }
-    
+
     const data = await response.json();
-    
+
     for (const token of data) {
       results[token.id] = {
         id: token.id,
@@ -270,6 +314,7 @@ export async function fetchMultipleTokens(tokenIds: string[]): Promise<Record<st
         name: token.name,
         currentPrice: token.current_price || 0,
         marketCap: token.market_cap || 0,
+        totalVolume: token.total_volume || 0,
         circulatingSupply: token.circulating_supply || 0,
         totalSupply: token.total_supply || 0,
         maxSupply: token.max_supply,
@@ -285,14 +330,14 @@ export async function fetchMultipleTokens(tokenIds: string[]): Promise<Record<st
         sparkline7d: token.sparkline_in_7d?.price,
       };
     }
-    
+
     // Save to localStorage
     saveToLocalStorage(results);
-    
+
   } catch (error) {
     console.error('Failed to fetch multiple tokens:', error);
   }
-  
+
   return results;
 }
 
@@ -310,9 +355,9 @@ export async function fetchAllProtocolData(): Promise<Record<string, ProtocolLiv
   const results: Record<string, ProtocolLiveData> = {};
   const tokenIds = Object.values(COINGECKO_TOKEN_IDS);
   const fetchedAt = new Date().toISOString();
-  
+
   const tokenDataMap = await fetchMultipleTokens(tokenIds);
-  
+
   for (const [protocolId, tokenId] of Object.entries(COINGECKO_TOKEN_IDS)) {
     const tokenData = tokenDataMap[tokenId] || null;
     results[protocolId] = {
@@ -321,7 +366,7 @@ export async function fetchAllProtocolData(): Promise<Record<string, ProtocolLiv
       fetchedAt,
     };
   }
-  
+
   return results;
 }
 
@@ -334,18 +379,18 @@ export async function getSimplePrices(tokenIds: string[]): Promise<Record<string
     const response = await fetch(
       `${COINGECKO_BASE_URL}/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`
     );
-    
+
     if (!response.ok) {
       return {};
     }
-    
+
     const data = await response.json();
     const result: Record<string, number> = {};
-    
+
     for (const id of tokenIds) {
       result[id] = data[id]?.usd || 0;
     }
-    
+
     return result;
   } catch (error) {
     console.error('Failed to fetch simple prices:', error);
@@ -380,7 +425,7 @@ export async function fetchWithRateLimit<T>(
     console.warn('Rate limit: Please wait before fetching again');
     return null;
   }
-  
+
   lastFetchTime = now;
   return fetchFn();
 }
@@ -428,15 +473,15 @@ export const autoRefreshManager = new AutoRefreshManager();
  */
 export function getTimeUntilNextRefresh(lastFetch: Date | null): string {
   if (!lastFetch) return 'Never';
-  
+
   const elapsed = Date.now() - lastFetch.getTime();
   const remaining = AUTO_REFRESH_INTERVAL - elapsed;
-  
+
   if (remaining <= 0) return 'Now';
-  
+
   const minutes = Math.floor(remaining / 60000);
   const seconds = Math.floor((remaining % 60000) / 1000);
-  
+
   if (minutes > 0) {
     return `${minutes}m ${seconds}s`;
   }

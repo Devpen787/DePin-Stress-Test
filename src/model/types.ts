@@ -9,7 +9,8 @@
 
 export type DemandType = 'consistent' | 'high-to-decay' | 'growth' | 'volatile';
 export type MacroCondition = 'bearish' | 'bullish' | 'sideways';
-export type ViewMode = 'sandbox' | 'comparison';
+export type ThesisScenario = 'baseline' | 'winter' | 'saturation' | 'utility';
+export type ViewMode = 'sandbox' | 'comparison' | 'explorer';
 
 // ============================================================================
 // PROVIDER AGENT MODEL
@@ -27,6 +28,8 @@ export interface Provider {
   cumulativeProfit: number;      // Total profit since joining
   consecutiveLossWeeks: number;  // Weeks of consecutive losses
   isActive: boolean;             // Whether provider is still active
+  type: 'urban' | 'rural';       // Provider tier (Urban = High Cost, Rural = Low Cost)
+  locationScore: number;         // Share Factor (1.0 = Unique, 0.3 = Dense/Redundant)
 }
 
 /**
@@ -45,21 +48,30 @@ export interface ProviderPool {
 export interface SimulationParams {
   // Time
   T: number;                           // Simulation duration in weeks
-  
+
   // Tokenomics
   initialSupply: number;               // Initial token supply
   initialPrice: number;                // Initial token price in USD
   maxMintWeekly: number;               // Maximum weekly emissions
   burnPct: number;                     // Fraction of spent tokens burned (0-1)
-  
+
+  // Liquidity & Investor Unlock (Module 3)
+  initialLiquidity: number;            // Initial USD in Liquidity Pool (Depth)
+  investorUnlockWeek: number;          // Week when investors unlock
+  investorSellPct: number;             // % of Total Supply sold by investors at unlock
+
+  // Scenario Override (Thesis Section 9)
+  scenario: ThesisScenario;
+
+
   // Demand
   demandType: DemandType;              // Demand curve shape
   baseDemand: number;                  // Base weekly demand units
   demandVolatility: number;            // Demand noise coefficient
-  
+
   // Macro
   macro: MacroCondition;               // Market condition
-  
+
   // Provider Economics
   initialProviders: number;            // Starting provider count
   baseCapacityPerProvider: number;     // Mean capacity per provider
@@ -71,22 +83,22 @@ export interface SimulationParams {
   profitThresholdToJoin: number;       // Min expected profit to attract new providers
   maxProviderGrowthRate: number;       // Max % provider growth per week
   maxProviderChurnRate: number;        // Max % provider churn per week
-  
+
   // Price Sensitivity Coefficients
   kBuyPressure: number;                // Buy pressure → price coefficient
   kSellPressure: number;               // Sell pressure → price coefficient
   kDemandPrice: number;                // Demand scarcity → price coefficient
   kMintPrice: number;                  // Dilution → price coefficient
-  
+
   // Service Pricing
   baseServicePrice: number;            // Starting service price
   servicePriceElasticity: number;      // How fast service price adjusts to scarcity
   minServicePrice: number;             // Service price floor
   maxServicePrice: number;             // Service price ceiling
-  
+
   // Reward Mechanics
   rewardLagWeeks: number;              // Weeks delay before providers receive rewards
-  
+
   // Simulation
   nSims: number;                       // Monte Carlo runs
   seed: number;                        // RNG seed for reproducibility
@@ -101,11 +113,11 @@ export interface SimulationParams {
  */
 export interface SimulationState {
   t: number;
-  
+
   // Token State
   tokenPrice: number;
   tokenSupply: number;
-  
+
   // Service State
   servicePrice: number;
   demand: number;
@@ -113,18 +125,18 @@ export interface SimulationState {
   capacity: number;
   utilisation: number;
   scarcity: number;
-  
+
   // Provider State
   providers: ProviderPool;
   activeProviderCount: number;
-  
+
   // Token Flows
   minted: number;
   burned: number;
   buyPressure: number;                 // Tokens bought by users for service
   sellPressure: number;                // Tokens sold by providers to cover costs
   netFlow: number;                     // Net token flow affecting price
-  
+
   // Economics
   avgProviderProfit: number;
   avgProviderRevenue: number;
@@ -158,6 +170,17 @@ export interface SimResult {
   netFlow: number;
   churnCount: number;
   joinCount: number;
+
+  // Solvency Metrics
+  solvencyScore: number;
+  netDailyLoss: number;
+  dailyMintUsd: number;
+  dailyBurnUsd: number;
+
+  // Capitulation Metrics
+  urbanCount: number;
+  ruralCount: number;
+  weightedCoverage: number;
 }
 
 /**
@@ -195,6 +218,17 @@ export interface AggregateResult {
   netFlow: MetricStats;
   churnCount: MetricStats;
   joinCount: MetricStats;
+
+  // Solvency Metrics
+  solvencyScore: MetricStats;
+  netDailyLoss: MetricStats;
+  dailyMintUsd: MetricStats;
+  dailyBurnUsd: MetricStats;
+
+  // Capitulation Metrics
+  urbanCount: MetricStats;
+  ruralCount: MetricStats;
+  weightedCoverage: MetricStats;
 }
 
 // ============================================================================
@@ -210,24 +244,24 @@ export interface DerivedMetrics {
   priceVolatility: number;             // Price standard deviation
   sharpeRatio: number;                 // Risk-adjusted return
   deathSpiralProbability: number;      // % of sims where price < 10% of initial
-  
+
   // Token Metrics
   tokenVelocity: number;               // Tokens transacted / supply
   inflationRate: number;               // (minted - burned) / supply annualised
   netEmissions: number;                // Cumulative minted - burned
-  
+
   // Provider Metrics
   avgProviderProfit: number;
   providerProfitability: number;       // % of time providers were profitable
   totalChurn: number;                  // Total providers who left
   totalJoins: number;                  // Total providers who joined
   retentionRate: number;               // Final providers / peak providers
-  
+
   // Network Metrics
   avgUtilisation: number;
   demandSatisfactionRate: number;      // Demand served / demand requested
   capacityUtilisationEfficiency: number;
-  
+
   // Economic Metrics
   totalNetworkRevenue: number;         // Sum of (demandServed * servicePrice)
   totalProviderRevenue: number;        // Sum of minted token value
@@ -245,6 +279,7 @@ export interface ProtocolProfileV1 {
     name: string;
     notes: string;
     mechanism: string;
+    model_type: 'location_based' | 'fungible_resource';
     source: 'Interview-Derived' | 'Placeholder-Derived';
   };
   parameters: {

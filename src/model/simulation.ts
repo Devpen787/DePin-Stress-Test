@@ -27,17 +27,33 @@ function createProvider(
   params: SimulationParams,
   joinedWeek: number
 ): Provider {
+  // 30% Urban (High Cost), 70% Rural (Low Cost)
+  const isUrban = rng.next() < 0.3;
+  const type = isUrban ? 'urban' : 'rural';
+
+  const costMultiplier = isUrban ? 1.5 : 0.8;
+
   // Heterogeneous capacity (normal distribution around base)
   const capacity = Math.max(
     10,
     params.baseCapacityPerProvider * (1 + params.capacityStdDev * rng.normal())
   );
 
-  // Heterogeneous costs (normal distribution around base)
+  // Heterogeneous costs with tier multiplier
   const operationalCost = Math.max(
     1,
-    params.providerCostPerWeek * (1 + params.costStdDev * rng.normal())
+    (params.providerCostPerWeek * costMultiplier) * (1 + params.costStdDev * rng.normal())
   );
+
+  // Derived Share Factor (Location Score)
+  // Urban: Simulating density of ~3.3 miners per hex (1 / 3.3 ≈ 0.30)
+  // Rural: Simulating unique coverage (1 / 1.0 = 1.0)
+  let locationScore = 1.0;
+  if (isUrban) {
+    // Urban variance: 2 to 5 neighbors
+    const neighbors = 2 + Math.abs(rng.normal() * 1.5);
+    locationScore = 1 / (1 + neighbors);
+  }
 
   return {
     id: rng.uuid(),
@@ -47,6 +63,8 @@ function createProvider(
     cumulativeProfit: 0,
     consecutiveLossWeeks: 0,
     isActive: true,
+    type,
+    locationScore,
   };
 }
 
@@ -153,12 +171,22 @@ function processProviderDecisions(
 
   // Attract new providers based on expected profit
   const avgProfit = calculateAverageProfit(providerProfits);
-  if (avgProfit > params.profitThresholdToJoin) {
+
+  let potentialJoins = 0;
+
+  // SCENARIO 2: HARDWARE SATURATION (Mass Join Event)
+  if (params.scenario === 'saturation' && currentWeek === Math.floor(params.T / 3)) {
+    // Massive spike: Insert 3x current supply
+    potentialJoins = pool.active.length * 2.0;
+  } else if (avgProfit > params.profitThresholdToJoin) {
+    // Standard growth
     const attractiveness = (avgProfit - params.profitThresholdToJoin) / params.profitThresholdToJoin;
-    const potentialJoins = Math.floor(
+    potentialJoins = Math.floor(
       newActive.length * params.maxProviderGrowthRate * Math.min(1, attractiveness)
     );
+  }
 
+  if (potentialJoins > 0) {
     for (let i = 0; i < potentialJoins; i++) {
       // Add to pending (will come online after lead time)
       newPending.push(createProvider(rng, params, currentWeek));
@@ -266,6 +294,71 @@ function calculateSellPressure(
 }
 
 // ============================================================================
+// PANIC LOGIC (MODULE 3)
+// ============================================================================
+
+/**
+ * Handle immediate panic churn during a price shock
+ * Returns cost-sensitive churn count (Urban > Rural)
+ */
+function processPanicEvents(
+  pool: ProviderPool,
+  oldPrice: number,
+  newPrice: number,
+  previousProfits: Map<string, number>,
+  rng: SeededRNG
+): { pool: ProviderPool; churnCount: number } {
+  const newActive: Provider[] = [];
+  const newChurned: Provider[] = [...pool.churned];
+  let churnCount = 0;
+
+  const priceRatio = newPrice / Math.max(oldPrice, 0.0001);
+
+  for (const provider of pool.active) {
+    // Estimate new profitability immediately
+    // Reconstruct revenue from previous profit (Profit = Rev - Cost -> Rev = Profit + Cost)
+    const lastProfit = previousProfits?.get(provider.id) || 0;
+    const lastRevenue = lastProfit + provider.operationalCost;
+
+    const estimatedNewRevenue = lastRevenue * priceRatio;
+    const estimatedNewProfit = estimatedNewRevenue - provider.operationalCost;
+
+    let panicProb = 0;
+
+    // Panic Thresholds
+    if (estimatedNewProfit < 0) {
+      // Basic panic if underwater
+      panicProb = 0.2;
+
+      // Severe panic if deeply underwater (Rev doesn't even cover half of cost)
+      if (estimatedNewRevenue < provider.operationalCost * 0.5) {
+        panicProb = 0.8;
+      }
+
+      // Urban Sensitivity: Higher OPEX means they are 'Smart Money' / faster to leave
+      // Rural: "Set and Forget" / lower sensitivity
+      if (provider.type === 'urban') {
+        panicProb += 0.3; // Urban more likely to panic
+      }
+    }
+
+    if (rng.next() < panicProb) {
+      provider.isActive = false;
+      newChurned.push(provider);
+      churnCount++;
+    } else {
+      newActive.push(provider);
+    }
+  }
+
+  return {
+    pool: { ...pool, active: newActive, churned: newChurned },
+    churnCount
+  };
+}
+
+
+// ============================================================================
 // MAIN SIMULATION
 // ============================================================================
 
@@ -274,6 +367,7 @@ function calculateSellPressure(
  */
 export function simulateOne(params: SimulationParams, simSeed: number): SimResult[] {
   const rng = new SeededRNG(simSeed);
+  // ... existing code ...
 
   // Macro conditions
   let mu = 0.002;
@@ -301,6 +395,12 @@ export function simulateOne(params: SimulationParams, simSeed: number): SimResul
   let servicePrice = params.baseServicePrice;
   let providerPool = initialiseProviders(rng, params);
 
+  // Liquidity Pool State (Module 3)
+  // Assume a 50/50 pool initialized with initialLiquidity (USD)
+  let poolUsd = params.initialLiquidity;
+  let poolTokens = poolUsd / tokenPrice;
+  const k = poolUsd * poolTokens; // Constant Product k
+
   // Reward history for lag
   const rewardHistoryLength = Math.max(1, params.rewardLagWeeks + 1);
   const rewardHistory: number[] = new Array(rewardHistoryLength).fill(
@@ -311,6 +411,14 @@ export function simulateOne(params: SimulationParams, simSeed: number): SimResul
   const results: SimResult[] = [];
 
   for (let t = 0; t < params.T; t++) {
+    // Check for Investor Unlock Event (Module 3)
+    let unlockSellPressure = 0;
+    if (t === params.investorUnlockWeek) {
+      // "Cliff" Event: Investors dump % of supply
+      const unlockAmount = tokenSupply * params.investorSellPct;
+      unlockSellPressure = unlockAmount;
+    }
+
     let churnCount = 0;
     let joinCount = 0;
 
@@ -394,27 +502,107 @@ export function simulateOne(params: SimulationParams, simSeed: number): SimResul
     const incentive = (delayedReward - params.providerCostPerWeek) / params.providerCostPerWeek;
 
     // ========================================
-    // PHASE 5: PRICE UPDATE (NOW WITH SELL PRESSURE!)
+    // PHASE 5: PRICE UPDATE (AMM + ORGANIC)
     // ========================================
 
-    // Net token flow affecting price
-    const netFlow = buyPressure - totalSellPressure - burned;
+    let nextPrice = tokenPrice;
+    let netFlow = 0; // Shared scope for results
 
-    // Price dynamics with buy/sell pressure
-    const buyPressureEffect = params.kBuyPressure * Math.tanh(buyPressure / tokenSupply * 100);
-    const sellPressureEffect = -params.kSellPressure * Math.tanh(totalSellPressure / tokenSupply * 100);
-    const demandPressure = params.kDemandPrice * Math.tanh(scarcity);
-    const dilutionPressure = -params.kMintPrice * (minted / tokenSupply) * 100;
+    if (unlockSellPressure > 0) {
+      // MODULE 3: LIQUIDITY SHOCK (Constant Product AMM Math)
+      // Sell 'unlockSellPressure' tokens into the pool
+      // k = x * y
+      // (poolTokens + amountIn) * (poolUsd - amountOut) = k
 
-    const logReturn =
-      mu +
-      buyPressureEffect +
-      sellPressureEffect +
-      demandPressure +
-      dilutionPressure +
-      sigma * rng.normal();
+      const amountIn = unlockSellPressure;
+      const newPoolTokens = poolTokens + amountIn;
+      const newPoolUsd = k / newPoolTokens;
+      const amountOut = poolUsd - newPoolUsd; // USD removed from pool
 
-    const nextPrice = Math.max(0.01, tokenPrice * Math.exp(logReturn));
+      // Update Pool State
+      poolTokens = newPoolTokens;
+      poolUsd = newPoolUsd;
+
+      // New Spot Price
+      nextPrice = poolUsd / poolTokens;
+
+      // Net Flow is massively negative due to unlock dump
+      netFlow = -unlockSellPressure;
+
+      // MODULE 3: IMMEDIATE PANIC (Dynamic)
+      // Check for immediate miner capitulation due to price crash
+      if (previousProfits) {
+        const panicResult = processPanicEvents(
+          providerPool,
+          tokenPrice,
+          nextPrice,
+          previousProfits,
+          rng
+        );
+        providerPool = panicResult.pool;
+        churnCount += panicResult.churnCount;
+      }
+
+    } else {
+      // ===================================
+      // THESIS SCENARIO logic (Overrides)
+      // ===================================
+      if (params.scenario === 'winter') {
+        // SCENARIO 1: CRYPTO WINTER (-90% Price Decay)
+        // Deterministic decay: Price(t) = P0 * (0.1)^(t/T)
+        // Add minimal noise for realism
+        const targetPrice = params.initialPrice * Math.pow(0.1, t / params.T);
+        const noise = 1 + (rng.normal() * 0.02); // 2% noise
+        nextPrice = Math.max(0.0001, targetPrice * noise);
+
+        // Sync pool depth to this new price (Arbitrage assumption)
+        poolUsd = Math.sqrt(k * nextPrice);
+        poolTokens = Math.sqrt(k / nextPrice);
+        netFlow = nextPrice - tokenPrice; // Proxy for flow
+
+      } else {
+        // BASELINE / ORGANIC PRICE ACTION (Standard Model)
+        // Net token flow affecting price
+        let buyPressureEffective = buyPressure;
+        let scarcityEffective = scarcity;
+
+        // SCENARIO 3: UTILITY VALIDATION (Demand Boost)
+        if (params.scenario === 'utility') {
+          // Force Compounding Growth on Demand Side
+          // Verify outcome: Burn > Emissions
+          // Overwrite demand signal for price calc
+          const growthFactor = Math.pow(1.10, t / 4); // 10% month-over-month
+          const boostedDemand = params.baseDemand * growthFactor;
+          // Recalculate pressures with boosted demand
+          // (Note: We use the 'real' demandServed from earlier for actual burn, 
+          // but we boost the *signal* here to ensure price reflects the narrative)
+          buyPressureEffective = calculateBuyPressure(Math.min(boostedDemand, totalCapacity), servicePrice, tokenPrice);
+          scarcityEffective = (boostedDemand - totalCapacity) / totalCapacity;
+        }
+
+        netFlow = buyPressureEffective - totalSellPressure - burned;
+
+        // Price dynamics with buy/sell pressure
+        const buyPressureEffect = params.kBuyPressure * Math.tanh(buyPressureEffective / tokenSupply * 100);
+        const sellPressureEffect = -params.kSellPressure * Math.tanh(totalSellPressure / tokenSupply * 100);
+        const demandPressure = params.kDemandPrice * Math.tanh(scarcityEffective);
+        const dilutionPressure = -params.kMintPrice * (minted / tokenSupply) * 100;
+
+        const logReturn =
+          mu +
+          buyPressureEffect +
+          sellPressureEffect +
+          demandPressure +
+          dilutionPressure +
+          sigma * rng.normal();
+
+        nextPrice = Math.max(0.0001, tokenPrice * Math.exp(logReturn)); // Floor at $0.0001
+
+        // Sync pool
+        poolUsd = Math.sqrt(k * nextPrice);
+        poolTokens = Math.sqrt(k / nextPrice);
+      }
+    }
 
     // ========================================
     // PHASE 6: SUPPLY UPDATE
@@ -444,6 +632,15 @@ export function simulateOne(params: SimulationParams, simSeed: number): SimResul
       netFlow,
       churnCount,
       joinCount,
+      // Solvency Metrics (Daily)
+      solvencyScore: ((burned / 7) * tokenPrice) / (((minted / 7) * tokenPrice) || 1) * (minted > 0 ? 1 : 10),
+      netDailyLoss: ((burned / 7) - (minted / 7)) * tokenPrice,
+      dailyMintUsd: (minted / 7) * tokenPrice,
+      dailyBurnUsd: (burned / 7) * tokenPrice,
+      // Capitulation Metrics
+      urbanCount: providerPool.active.filter(p => p.type === 'urban').length,
+      ruralCount: providerPool.active.filter(p => p.type === 'rural').length,
+      weightedCoverage: providerPool.active.reduce((sum, p) => sum + p.locationScore, 0),
     });
 
     // Update state for next iteration
@@ -510,6 +707,13 @@ export function runSimulation(params: SimulationParams): AggregateResult[] {
     'netFlow',
     'churnCount',
     'joinCount',
+    'solvencyScore',
+    'netDailyLoss',
+    'dailyMintUsd',
+    'dailyBurnUsd',
+    'urbanCount',
+    'ruralCount',
+    'weightedCoverage',
   ];
 
   for (let t = 0; t < params.T; t++) {
