@@ -48,11 +48,11 @@ function createProvider(
   // Derived Share Factor (Location Score)
   // Urban: Simulating density of ~3.3 miners per hex (1 / 3.3 ≈ 0.30)
   // Rural: Simulating unique coverage (1 / 1.0 = 1.0)
-  let locationScore = 1.0;
+  let locationScale = 1.0;
   if (isUrban) {
     // Urban variance: 2 to 5 neighbors
     const neighbors = 2 + Math.abs(rng.normal() * 1.5);
-    locationScore = 1 / (1 + neighbors);
+    locationScale = 1 / (1 + neighbors);
   }
 
   return {
@@ -64,7 +64,7 @@ function createProvider(
     consecutiveLossWeeks: 0,
     isActive: true,
     type,
-    locationScore,
+    locationScale,
   };
 }
 
@@ -342,10 +342,12 @@ function processPanicEvents(
         panicProb = 0.8;
       }
 
-      // Urban Sensitivity: Higher OPEX means they are 'Smart Money' / faster to leave
-      // Rural: "Set and Forget" / lower sensitivity
+      // Urban Sensitivity: Higher CAPEX/OPEX means "Sunk Cost Stability" -> They stay longer
+      // Rural: Low cost entry -> Easy come, easy go
       if (provider.type === 'urban') {
-        panicProb += 0.3; // Urban more likely to panic
+        panicProb -= 0.3; // Urban LESS likely to panic (Sunk Cost)
+      } else {
+        panicProb += 0.1; // Rural MORE likely to panic (Low friction)
       }
     }
 
@@ -666,7 +668,7 @@ export function simulateOne(
       // Capitulation Metrics - Scale UP
       urbanCount: providerPool.active.filter(p => p.type === 'urban').length * scalingFactor,
       ruralCount: providerPool.active.filter(p => p.type === 'rural').length * scalingFactor,
-      weightedCoverage: providerPool.active.reduce((sum, p) => sum + p.locationScore, 0) * scalingFactor,
+      weightedCoverage: providerPool.active.reduce((sum, p) => sum + p.locationScale, 0) * scalingFactor,
       // Module 4
       treasuryBalance: (treasuryTokens + (params.revenueStrategy === 'reserve' ? burnedMacro : 0)) * tokenPrice,
       vampireChurn: 0, // Placeholder

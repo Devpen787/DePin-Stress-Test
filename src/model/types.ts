@@ -29,7 +29,7 @@ export interface Provider {
   consecutiveLossWeeks: number;  // Weeks of consecutive losses
   isActive: boolean;             // Whether provider is still active
   type: 'urban' | 'rural';       // Provider tier (Urban = High Cost, Rural = Low Cost)
-  locationScore: number;         // Share Factor (1.0 = Unique, 0.3 = Dense/Redundant)
+  locationScale: number; // 0..1 (Connectivity/Density)/ Share Factor (1.0 = Unique, 0.3 = Dense/Redundant)
 }
 
 /**

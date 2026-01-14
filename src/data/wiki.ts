@@ -120,6 +120,31 @@ Tests defense mechanisms against competitors.
   `
   },
   {
+    id: 'methodology',
+    title: '3. Methodology (ADEMP Framework)',
+    icon: '📐',
+    content: `
+### Research Framework: IMRaD
+This simulation adheres to the **IMRaD** model (Introduction, Methods, Results, Discussion), mirroring the cyclical nature of the scientific method.
+
+### The ADEMP Structure
+The simulation core follows the **ADEMP** framework used in biostatistics and econometrics:
+*   **Aims**: Evaluating directional robustness (Survival vs Ruin) under adverse stress.
+*   **Data-Generating Mechanisms (DGM)**: Utilizing Agent-Based Models (ABM) and Geometric Brownian Motion (GBM) to create probability cones.
+*   **Estimands**: Quantifying the **Burn-to-Emission Ratio ($R_{BE}$)** and **Churn Probability ($P_{churn}$)**.
+*   **Methods**: A three-phase procedure:
+    1.  **Generation**: Creating test cases (e.g., Liquidity Shock).
+    2.  **Simulation**: Executing 1,000+ Monte Carlo runs.
+    3.  **Analysis**: The "Test Oracle" verdict (Pass/Fail).
+*   **Performance Measures**: Tracking **Recovery Hysteresis** and the **Psychological Breakpoint** (where payback > 14 months).
+
+### The ORSTE Engine
+The **Onocoy Resilience & Stress-Test Engine (ORSTE)** acts as a "flight simulator" for tokenomics. It distinguishes between:
+*   **Verification**: Checking code correctness (Unit Tests).
+*   **Validation**: Ensuring fidelity to physical reality (e.g., "Sunk Cost Stability").
+  `
+  },
+  {
     id: 'thesis',
     title: '2. Thesis Dashboard',
     icon: '📉',
@@ -410,32 +435,31 @@ This tool is a **Stochastic Model**, not a crystal ball. It calculates *probabil
 | **Solvency Matrix** | Case Study | Heatmap of Emissions (Y-Axis) vs Usage (X-Axis). | **Green Zone** (High Usage / Low Emissions). | **Purple Zone** (High Emissions / Zero Usage). |
 | **Resilience Radar** | Case Study | 5-point score on Sybil, Capex, Algo, demand, & Governance. | **Full Pentagon** (High scores on all edges). | **Collapsed Core** (Low scores). |
 | **Supply Growth** | Explorer | Sparkline of total token supply over time. | **Sigmoid Curve** (Growth tapers off). | **Hyper-Exponential** (Infinite inflation). |
-| **Solvency Ratio** | Explorer | Line chart of Burn / Mint ratio. | **> 1.0** (Net Deflationary). | **< 0.5** (Dilutive Ponzi). |
+| **Solvency Ratio** | Explorer | Line chart of Burn / Mint ratio. | **> 1.0** (Net Deflationary). | **< 0.5** (Dilutive Ponzi).
   `
   },
   {
     id: 'sources',
     title: '15. Sources & Bibliography',
-    icon: '📡',
+    icon: '📚',
     content: `
-### Data Providers
-*   **CoinGecko API**: Real-time price, volume, and market cap data. [https://www.coingecko.com/](https://www.coingecko.com/)
-*   **Solana RPC**: On-chain verification for token supply. [https://docs.solana.com/](https://docs.solana.com/)
+### Primary Project Data
+*   **Mardikes, M. A. (2025)**. *Decentralized Physical Infrastructure Networks (DePIN) on Solana: A Tokenomic Stress-Test and Sustainability Analysis (Case Study: Onocoy).*
+*   **Onocoy Documentation**. *Mining Rewards Breakdown: Location and Quality Scales.* [docs.onocoy.com](https://docs.onocoy.com)
 
-### Core DePIN Research
-*   **Burn-and-Mint Equilibrium (BME)**: The foundational economic model for Helium and Hivemapper. *Multicoin Capital*. [Read Article](https://multicoin.capital/2018/02/13/new-models-utility-tokens/)
-*   **The DePIN Flywheel**: Understanding network effects in physical infrastructure. *Messari*. [Read Report](https://messari.io/report/state-of-depin-2023)
-*   **Tokenomics 101**: Supply-side vs Demand-side dynamics. *Bankless*.
+### Scientific Writing & Frameworks
+*   **Morris, T. P., White, I. R., & Crowther, M. J. (2019)**. *Using simulation studies to evaluate statistical methods (ADEMP).* Statistics in Medicine.
+*   **Sollaci, L. B., & Pereira, M. G. (2004)**. *The introduction, methods, results, and discussion (IMRAD) structure: a fifty-year survey.*
+*   **Utah Valley University**. *Scientific Writing: IMRaD.*
 
-### Project Whitepapers
-*   **Helium (HNT)**: Proof-of-Coverage and Data Credits. [Whitepaper](https://docs.helium.com/)
-*   **Hivemapper (HONEY)**: Map coverage and quality verification. [Docs](https://docs.hivemapper.com/)
-*   **Render Network (RNDR)**: Distributed GPU computing. [Knowledge Base](https://know.rendernetwork.com/)
-*   **Arweave (AR)**: Permanent storage economics. [Yellow Paper](https://www.arweave.org/yellow-paper.pdf)
+### Simulation & Validation
+*   **Sartori, L. V. (2022)**. *3 steps for simulation-based testing.* SAFER AUTONOMOUS.
+*   **Harris, D. J., et al. (2020)**. *A Framework for the Testing and Validation of Simulated Environments.* Frontiers in Psychology.
+*   **Collins, A., Koehler, M., & Lynch, C. (2024)**. *Methods That Support the Validation of Agent-Based Models.* Journal of Artificial Societies and Social Simulation.
 
-### Simulation Mechanics
-*   **Geometric Brownian Motion (GBM)**: The mathematical model used for synthetic price generation in the Simulator (V2). [Wikipedia](https://en.wikipedia.org/wiki/Geometric_Brownian_motion)
-*   **Agent-Based Modeling (ABM)**: The methodology used for the Thesis Dashboard (V3) to simulate emergent behavior. [Journal of Artificial Societies](https://www.jasss.org/)
-  `
+### Visualization
+*   **Salvati, Z. M., et al. (2023)**. *A picture is worth a thousand words: advancing the use of visualization tools (Process Mapping).* NIH.
+*   **Garrett, T. (2025)**. *D3.js Force Simulation for Interactive Network Visualization.* Dev3lop.
+        `
   }
 ];

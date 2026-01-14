@@ -1,0 +1,42 @@
+# DePIN Stress Test Simulator
+
+> A proactive risk modeling tool for Decentralized Physical Infrastructure Networks.
+
+## Summary
+The DePIN Stress Test Simulator is an interactive dashboard designed to model the economic resilience of physical infrastructure networks (like Helium, Hivemapper, or Filecoin). It uses agent-based modeling and stochastic simulations to predict how networks behave under extreme conditions.
+
+## Key Capabilities
+
+### 1. Simulation Sandbox
+*   **Time Horizon**: Simulate up to 52 weeks of network activity.
+*   **Modules**:
+    *   *Solvency Matrix*: Tests if token emissions can be covered by real revenue.
+    *   *Capitulation Stack*: Models miner churn when opex > rewards.
+    *   *Liquidity Shock*: Simulates investor token unlocks and price impact.
+    *   *Vampire Attack*: Models competitive threats from well-funded forks.
+
+### 2. Thesis Dashboard
+*   **Scoring**: Generates a 0-100 "DePIN Score" based on:
+    *   *Utility*: Hardware verification and data quality.
+    *   *Sovereignty*: Decentralization of governance.
+    *   *Velocity*: Token turnover rate.
+*   **Grid Composition**: Visualizes the ratio of "Specs" (speculators) vs "Nodes" (utility providers).
+
+### 3. Protocol Explorer
+The dashboard connects to live market data (via CoinGecko) to benchmark real-world projects such as:
+*   Helium (HNT)
+*   Hivemapper (HONEY)
+*   Render (RNDR)
+*   Arweave (AR)
+*   Filecoin (FIL)
+
+## API / Data Structure
+The application does not have a public API, but exposes its logic via client-side TypeScript modules.
+*   **Core Logic**: `src/model/simulation.ts` (Monte Carlo engine)
+*   **Data Models**: `src/data/wiki.ts` (Documentation), `src/data/scenarios.ts` (Presets)
+
+## Usage for Agents
+If you are an AI agent planning a network:
+1.  Use the **Solvency Ratio** to determine if your burn rate is sustainable (>1.0 is safe).
+2.  Check the **Payback Period**. If >18 months, risk of capitulation is high.
+3.  Stress test **Investor Unlocks**. Ensure liquidity > 10% of market cap before unlocking seed rounds.
