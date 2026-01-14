@@ -129,6 +129,7 @@ import { CHART_INTERPRETATIONS } from './src/data/chartInterpretations';
 import { REGIME_KNOWLEDGE } from './src/data/regimeKnowledge';
 import MetricCard from './src/components/ui/MetricCard';
 import BaseChartBox from './src/components/ui/BaseChartBox';
+import { SolanaVerifier, type NetworkStatus } from './src/model/solana';
 import FormulaDisplay from './src/components/ui/FormulaDisplay';
 import ParamLabel from './src/components/ui/ParamLabel';
 import { HeaderDropdown, DropdownItem, DropdownToggle, DropdownDivider } from './src/components/ui/HeaderDropdown';
@@ -247,12 +248,13 @@ const App: React.FC = () => {
   const [onChainMetrics, setOnChainMetrics] = useState<Record<string, OnChainMetrics>>({});
   const [activeTab, setActiveTab] = useState<'simulator' | 'thesis'>('simulator');
   const [activeScenarioId, setActiveScenarioId] = useState<string | null>(null);
+  const [networkStatus, setNetworkStatus] = useState<NetworkStatus | null>(null);
 
   // Load from localStorage on mount
   useEffect(() => {
+    // 1. Load Protocol Cache
     const cached = loadFromLocalStorage();
     if (cached.data && cached.timestamp) {
-      // Map cached data to protocol IDs
       const mappedData: Record<string, TokenMarketData | null> = {};
       for (const profile of PROTOCOL_PROFILES) {
         const coingeckoId = profile.metadata.coingeckoId;
@@ -265,11 +267,16 @@ const App: React.FC = () => {
       setLastLiveDataFetch(cached.timestamp);
     }
 
-    // Load mock on-chain metrics
+    // 2. Load Mock Chain Metrics
     setOnChainMetrics({
       'ono_v3_calibrated': getMockOnChainMetrics('onocoy'),
       'helium_bme_v1': getMockOnChainMetrics('helium'),
       'adaptive_elastic_v1': getMockOnChainMetrics('render'),
+    });
+
+    // 3. Fetch Real Solana Status (Proof of Reality)
+    SolanaVerifier.getNetworkStatus().then(status => {
+      setNetworkStatus(status);
     });
   }, []);
 
@@ -1122,6 +1129,7 @@ const App: React.FC = () => {
           ) : viewMode === 'explorer' ? (
             <ExplorerTab
               profiles={PROTOCOL_PROFILES}
+              networkStatus={networkStatus}
               onAnalyze={(id) => {
                 // Switch to sandbox and load the profile
                 // Explorer passes IDs that might be internal IDs OR CoingeckoIDs

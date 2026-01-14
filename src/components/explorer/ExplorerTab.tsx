@@ -8,17 +8,20 @@ import { fetchMultipleTokens, DEPIN_TOKENS } from '../../services/coingecko';
 import { ProtocolProfileV1 } from '../../data/protocols';
 
 import { SolanaService, OnChainData } from '../../services/solana';
+import { NetworkStatus } from '../../model/solana';
 
 interface ExplorerTabProps {
     onAnalyze: (protocolId: string) => void;
     onCompare: (protocolId: string) => void;
     profiles: ProtocolProfileV1[];
+    networkStatus: NetworkStatus | null;
 }
 
-export const ExplorerTab: React.FC<ExplorerTabProps> = ({ onAnalyze, onCompare, profiles }) => {
+export const ExplorerTab: React.FC<ExplorerTabProps> = ({ onAnalyze, onCompare, profiles, networkStatus }) => {
     const [protocols, setProtocols] = useState<ExplorerProtocol[]>([]);
     const [loading, setLoading] = useState(true);
     const [sortColumn, setSortColumn] = useState<SortColumn>('marketCap');
+    // ... (omitting unchanged lines for brevity if possible, or usually re-writing)
     const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
     const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
     const [verifiedData, setVerifiedData] = useState<Record<string, OnChainData>>({});
@@ -181,21 +184,30 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({ onAnalyze, onCompare, 
     return (
         <div className="flex flex-col h-full bg-slate-950 text-slate-50 overflow-hidden">
             {/* Header */}
-            <div className="flex-none p-6 border-b border-slate-800 bg-slate-900/50 backdrop-blur-sm">
-                <div className="flex justify-between items-start mb-6">
+            <div className="flex-none p-4 md:p-6 border-b border-slate-800 bg-slate-900/50 backdrop-blur-sm">
+                <div className="flex flex-col md:flex-row justify-between items-start gap-4 md:gap-0 mb-6">
                     <div>
-                        <h1 className="text-2xl font-bold text-slate-100">DePIN Explorer</h1>
-                        <p className="text-slate-400 mt-1">Discover, rank, and analyze decentralized physical infrastructure networks</p>
+                        <div className="flex flex-wrap items-center gap-3">
+                            <h1 className="text-xl md:text-2xl font-bold text-slate-100">DePIN Explorer</h1>
+                            {networkStatus && (
+                                <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[10px] font-mono ${networkStatus.isLive ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-red-500/10 border-red-500/30 text-red-400'}`}>
+                                    <div className={`w-1.5 h-1.5 rounded-full ${networkStatus.isLive ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
+                                    <span>MAINNET: {networkStatus.slot.toLocaleString()}</span>
+                                    {networkStatus.tps && <span className="opacity-50 hidden sm:inline">| {networkStatus.tps.toFixed(0)} TPS</span>}
+                                </div>
+                            )}
+                        </div>
+                        <p className="text-slate-400 mt-1 text-sm md:text-base">Discover, rank, and analyze decentralized physical infrastructure networks</p>
                     </div>
-                    <div className="flex gap-2">
-                        <div className="relative">
+                    <div className="flex gap-2 w-full md:w-auto">
+                        <div className="relative flex-1 md:flex-none">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                             <input
                                 type="text"
                                 placeholder="Search protocols..."
                                 value={filters.searchQuery}
                                 onChange={(e) => setFilters(prev => ({ ...prev, searchQuery: e.target.value }))}
-                                className="pl-9 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-64"
+                                className="pl-9 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full md:w-64"
                             />
                         </div>
                         <button
@@ -249,8 +261,14 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({ onAnalyze, onCompare, 
             </div>
 
             {/* Footer / Status */}
-            <div className="flex-none px-6 py-2 border-t border-slate-800 bg-slate-900/80 text-xs text-slate-500 flex justify-between">
-                <span>Showing {processedProtocols.length} protocols</span>
+            <div className="flex-none px-4 md:px-6 py-2 border-t border-slate-800 bg-slate-900/80 text-xs text-slate-500 flex flex-col md:flex-row justify-between gap-2 md:gap-0">
+                <span className="flex flex-wrap items-center gap-2">
+                    <span>Showing {processedProtocols.length} protocols</span>
+                    <span className="text-slate-700 hidden md:inline">|</span>
+                    <span title="Market Data from CoinGecko, Supply from Solana RPC">
+                        Data Source: <span className="text-slate-400 font-semibold">CoinGecko API</span> + <span className="text-slate-400 font-semibold">Solana RPC (Live)</span>
+                    </span>
+                </span>
                 <span>
                     Last updated: {lastUpdated ? lastUpdated.toLocaleTimeString() : 'Never'}
                     {loading && ' (Updating...)'}

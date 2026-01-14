@@ -22,7 +22,7 @@ import { generateDemandSeries } from './demand';
 /**
  * Create a new provider with heterogeneous characteristics
  */
-function createProvider(
+export function createProvider(
   rng: SeededRNG,
   params: SimulationParams,
   joinedWeek: number
@@ -214,7 +214,7 @@ function processProviderDecisions(
 /**
  * Calculate churn probability based on provider state
  */
-function calculateChurnProbability(
+export function calculateChurnProbability(
   consecutiveLossWeeks: number,
   currentProfit: number,
   params: SimulationParams
@@ -308,7 +308,7 @@ function calculateSellPressure(
  * Handle immediate panic churn during a price shock
  * Returns cost-sensitive churn count (Urban > Rural)
  */
-function processPanicEvents(
+export function processPanicEvents(
   pool: ProviderPool,
   oldPrice: number,
   newPrice: number,
