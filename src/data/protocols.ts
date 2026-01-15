@@ -24,6 +24,8 @@ export interface ProtocolProfileV1 {
             churn_threshold: { value: number; unit: string };
         };
         initial_active_providers: { value: number; unit: string };
+        initial_price: { value: number; unit: string };
+        hardware_cost: { value: number; unit: string };
     };
 }
 
@@ -53,7 +55,9 @@ export const PROTOCOL_PROFILES: ProtocolProfileV1[] = [
                 opex_weekly: { value: 30.00, unit: "usd/week" },
                 churn_threshold: { value: 10, unit: "usd/week_profit" }
             },
-            initial_active_providers: { value: 3000, unit: "nodes" }
+            initial_active_providers: { value: 3000, unit: "nodes" },
+            initial_price: { value: 0.10, unit: "usd" }, // Break-even baseline
+            hardware_cost: { value: 150, unit: "usd" }
         }
     },
     {
@@ -81,7 +85,9 @@ export const PROTOCOL_PROFILES: ProtocolProfileV1[] = [
                 opex_weekly: { value: 8.00, unit: "usd/week" },
                 churn_threshold: { value: 2.00, unit: "usd/week_profit" }
             },
-            initial_active_providers: { value: 370000, unit: "hotspots" }
+            initial_active_providers: { value: 370000, unit: "hotspots" },
+            initial_price: { value: 3.00, unit: "usd" },
+            hardware_cost: { value: 300, unit: "usd" }
         }
     },
     {
@@ -109,7 +115,9 @@ export const PROTOCOL_PROFILES: ProtocolProfileV1[] = [
                 opex_weekly: { value: 75.00, unit: "usd/week" },
                 churn_threshold: { value: 25.00, unit: "usd/week_profit" }
             },
-            initial_active_providers: { value: 5000, unit: "gpu_nodes" }
+            initial_active_providers: { value: 5000, unit: "gpu_nodes" },
+            initial_price: { value: 4.50, unit: "usd" },
+            hardware_cost: { value: 800, unit: "usd" }
         }
     },
     {
@@ -134,7 +142,9 @@ export const PROTOCOL_PROFILES: ProtocolProfileV1[] = [
                 opex_weekly: { value: 150.00, unit: "usd/week" },
                 churn_threshold: { value: 50.00, unit: "usd/week_profit" }
             },
-            initial_active_providers: { value: 3500, unit: "storage_providers" }
+            initial_active_providers: { value: 3500, unit: "storage_providers" },
+            initial_price: { value: 5.00, unit: "usd" },
+            hardware_cost: { value: 2500, unit: "usd" }
         }
     },
     {
@@ -159,7 +169,9 @@ export const PROTOCOL_PROFILES: ProtocolProfileV1[] = [
                 opex_weekly: { value: 40.00, unit: "usd/week" },
                 churn_threshold: { value: 15.00, unit: "usd/week_profit" }
             },
-            initial_active_providers: { value: 1000, unit: "providers" }
+            initial_active_providers: { value: 1000, unit: "providers" },
+            initial_price: { value: 2.50, unit: "usd" },
+            hardware_cost: { value: 500, unit: "usd" }
         }
     },
     {
@@ -184,7 +196,9 @@ export const PROTOCOL_PROFILES: ProtocolProfileV1[] = [
                 opex_weekly: { value: 5.00, unit: "usd/week" },
                 churn_threshold: { value: 2.00, unit: "usd/week_profit" }
             },
-            initial_active_providers: { value: 60000, unit: "cameras" }
+            initial_active_providers: { value: 60000, unit: "cameras" },
+            initial_price: { value: 0.15, unit: "usd" },
+            hardware_cost: { value: 300, unit: "usd" }
         }
     },
     {
@@ -209,7 +223,9 @@ export const PROTOCOL_PROFILES: ProtocolProfileV1[] = [
                 opex_weekly: { value: 2.00, unit: "usd/week" },
                 churn_threshold: { value: 1.00, unit: "usd/week_profit" }
             },
-            initial_active_providers: { value: 25000, unit: "vehicles" }
+            initial_active_providers: { value: 25000, unit: "vehicles" },
+            initial_price: { value: 0.20, unit: "usd" },
+            hardware_cost: { value: 300, unit: "usd" }
         }
     },
     {
@@ -237,7 +253,100 @@ export const PROTOCOL_PROFILES: ProtocolProfileV1[] = [
                 opex_weekly: { value: 0.50, unit: "usd/week" },
                 churn_threshold: { value: 0.10, unit: "usd/week_profit" }
             },
-            initial_active_providers: { value: 2_500_000, unit: "nodes" }
+            initial_active_providers: { value: 2_500_000, unit: "nodes" },
+            initial_price: { value: 1.50, unit: "usd" },
+            hardware_cost: { value: 0, unit: "usd" } // Software only
+        }
+    },
+    {
+        version: "1.2",
+        metadata: {
+            id: "ionet_v1",
+            name: "io.net",
+            mechanism: "GPU Marketplace + Staking",
+            notes: "Decentralized GPU cloud. 800M max supply with disinflationary emissions over 20 years.",
+            model_type: "fungible_resource",
+            source: "CoinGecko + io.net Docs",
+            coingeckoId: "io",
+            chain: "solana"
+        },
+        parameters: {
+            // 500M initial + 300M for emissions over 20 years
+            supply: { value: 500_000_000, unit: "tokens" },
+            // 8% Y1 emission rate = ~770K/week, decreasing 12% annually
+            emissions: { value: 770_000, unit: "tokens/week" },
+            burn_fraction: { value: 0.0, unit: "decimal" }, // No burn, staking rewards
+            adjustment_lag: { value: 0, unit: "weeks" },
+            demand_regime: { value: "growth", unit: "category" },
+            provider_economics: {
+                // GPU node costs vary widely: $100-500/week for high-end GPUs
+                opex_weekly: { value: 150.00, unit: "usd/week" },
+                churn_threshold: { value: 50.00, unit: "usd/week_profit" }
+            },
+            initial_active_providers: { value: 50000, unit: "gpu_nodes" },
+            initial_price: { value: 2.00, unit: "usd" },
+            hardware_cost: { value: 800, unit: "usd" }
+        }
+    },
+    {
+        version: "1.2",
+        metadata: {
+            id: "nosana_v1",
+            name: "Nosana",
+            mechanism: "GPU Grid + CI/CD",
+            notes: "Solana-native GPU grid for AI inference. 100M max supply. Mining rewards ending 2025.",
+            model_type: "fungible_resource",
+            source: "CoinGecko + Nosana Docs",
+            coingeckoId: "nosana",
+            chain: "solana"
+        },
+        parameters: {
+            // 100M total, ~48-83M circulating (vesting ending 2025)
+            supply: { value: 48_000_000, unit: "tokens" },
+            // Mining pool 20% = 20M over 24 months = ~190K/week
+            emissions: { value: 190_000, unit: "tokens/week" },
+            burn_fraction: { value: 0.0, unit: "decimal" },
+            adjustment_lag: { value: 1, unit: "weeks" },
+            demand_regime: { value: "growth", unit: "category" },
+            provider_economics: {
+                // Consumer GPU mining: $20-80/week in electricity
+                opex_weekly: { value: 40.00, unit: "usd/week" },
+                churn_threshold: { value: 15.00, unit: "usd/week_profit" }
+            },
+            initial_active_providers: { value: 3000, unit: "gpu_nodes" },
+            initial_price: { value: 3.50, unit: "usd" },
+            hardware_cost: { value: 600, unit: "usd" }
+        }
+    },
+    {
+        version: "1.2",
+        metadata: {
+            id: "geodnet_v1",
+            name: "Geodnet",
+            mechanism: "RTK Mining + Token Burn",
+            notes: "GNSS/RTK network for precision positioning. 80% revenue burn. Annual emission halving.",
+            model_type: "location_based",
+            source: "CoinGecko + Geodnet Docs",
+            coingeckoId: "geodnet",
+            chain: "solana" // Migrating from Polygon to Solana
+        },
+        parameters: {
+            // 1B total, ~440M circulating
+            supply: { value: 440_000_000, unit: "tokens" },
+            // 35% to miners over time, halving annually. ~24-48 GEOD/day per miner
+            // ~10K active miners * 36 GEOD/day avg = 360K/day = 2.5M/week
+            emissions: { value: 2_500_000, unit: "tokens/week" },
+            burn_fraction: { value: 0.80, unit: "decimal" }, // 80% revenue burn
+            adjustment_lag: { value: 0, unit: "weeks" },
+            demand_regime: { value: "growth", unit: "category" },
+            provider_economics: {
+                // Triple-band GNSS station: $50-100/month = ~$15-25/week
+                opex_weekly: { value: 20.00, unit: "usd/week" },
+                churn_threshold: { value: 8.00, unit: "usd/week_profit" }
+            },
+            initial_active_providers: { value: 10000, unit: "gnss_stations" },
+            initial_price: { value: 0.15, unit: "usd" },
+            hardware_cost: { value: 500, unit: "usd" }
         }
     }
 ];

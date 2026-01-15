@@ -120,8 +120,26 @@ Tests defense mechanisms against competitors.
   `
   },
   {
+    id: 'terminology',
+    title: '16. Terminology Translation',
+    icon: '📖',
+    content: `
+### Academic to Dashboard Dictionary
+
+The dashboard uses crypto-native terms. Here is how they map to the "DePIN Resilience" research paper.
+
+| Research Term (Academic) | Dashboard Metric (Native) | Source |
+| :--- | :--- | :--- |
+| **Sustainability Ratio** | **Sustainability Ratio (Burn-to-Emission)** | [Source 6] |
+| **High Sunk Cost Nodes** | **Urban Miners** | [Source 11] |
+| **Low Sunk Cost Nodes** | **Rural Miners** | [Source 11] |
+| **Location Scale** | **Rural Node Coverage** | [Source 15] |
+| **Burn-to-Emission** | **Solvency Score** | [Source 1] |
+    `
+  },
+  {
     id: 'data_integrity',
-    title: '16. Data Integrity & Live Oracles',
+    title: '17. Data Integrity & Live Oracles',
     icon: '🔗',
     content: `
 ### Proof of Reality
