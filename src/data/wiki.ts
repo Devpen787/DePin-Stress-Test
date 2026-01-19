@@ -502,6 +502,11 @@ This tool is a ** Stochastic Model **, not a crystal ball.It calculates * probab
 ### Visualization
   *   ** Salvati, Z.M., et al. (2023) **. * A picture is worth a thousand words: advancing the use of visualization tools(Process Mapping).* NIH.
 *   ** Garrett, T. (2025) **. * D3.js Force Simulation for Interactive Network Visualization.* Dev3lop.
+    
+### Industry Resources
+*   ** Awesome DePIN **. * The ultimate curated list of DePIN projects and research.* [github.com/iotexproject/awesome-depin](https://github.com/iotexproject/awesome-depin)
+*   ** DePINScan **. * Live explorer and map view for 50+ networks.* [depinscan.io](https://depinscan.io)
+*   ** DePINScan Map **. * Geographic density visualization.* [depinscan.io/map-view](https://depinscan.io/map-view)
         `
   }
 ];

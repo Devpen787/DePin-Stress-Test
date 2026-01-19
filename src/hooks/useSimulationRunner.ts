@@ -3,6 +3,7 @@ import {
     PROTOCOL_PROFILES,
     ProtocolProfileV1
 } from '../data/protocols';
+import { PEER_GROUPS } from '../data/peerGroups';
 import {
     type SimulationParams as NewSimulationParams,
     type AggregateResult as NewAggregateResult,
@@ -21,7 +22,7 @@ import { Optimizer } from '../model/optimizer';
 
 export const useSimulationRunner = () => {
     // --- STATE ---
-    const [viewMode, setViewMode] = useState<'sandbox' | 'comparison' | 'thesis'>('sandbox');
+    const [viewMode, setViewMode] = useState<'sandbox' | 'comparison' | 'thesis' | 'benchmark' | 'settings' | 'explorer'>('sandbox');
     const [selectedProtocolIds, setSelectedProtocolIds] = useState<string[]>([PROTOCOL_PROFILES[0].metadata.id]);
     const [activeProfile, setActiveProfile] = useState<ProtocolProfileV1>(PROTOCOL_PROFILES[0]);
     const [focusChart, setFocusChart] = useState<string | null>(null);
@@ -71,9 +72,14 @@ export const useSimulationRunner = () => {
         setTimeout(() => {
             const allResults: Record<string, AggregateResult[]> = {};
 
+            const benchmarkGroup = PEER_GROUPS[0];
+            const benchmarkIds = benchmarkGroup ? benchmarkGroup.members : [];
+
             const protocolsToSimulate = viewMode === 'comparison'
                 ? PROTOCOL_PROFILES.filter(p => selectedProtocolIds.includes(p.metadata.id))
-                : [activeProfile];
+                : viewMode === 'benchmark'
+                    ? PROTOCOL_PROFILES.filter(p => benchmarkIds.includes(p.metadata.id))
+                    : [activeProfile];
 
             protocolsToSimulate.forEach(profile => {
                 const isSandbox = viewMode === 'sandbox';
@@ -248,7 +254,7 @@ export const useSimulationRunner = () => {
     };
 
     useEffect(() => {
-        if (autoRun && viewMode === 'sandbox') {
+        if (autoRun && (viewMode === 'sandbox' || viewMode === 'benchmark')) {
             const timer = setTimeout(() => {
                 runSimulation();
             }, 600);
@@ -275,6 +281,7 @@ export const useSimulationRunner = () => {
         loadProfile,
         setSelectedProtocolIds,
         focusChart, setFocusChart,
+        useNewModel, setUseNewModel,
         findBreakEven: () => {
             setLoading(true);
             setTimeout(() => {

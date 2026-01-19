@@ -22,7 +22,10 @@ export const SCENARIOS: SimulationScenario[] = [
         params: {
             investorSellPct: 0.5, // 50% dump
             investorUnlockWeek: 20, // Week 20
-            macro: 'bearish'
+            macro: 'bearish',
+            growthCallEventPct: 0, // Reset others
+            competitorYield: 0,
+            maxMintWeekly: 5_000_000
         }
     },
     {
@@ -36,7 +39,11 @@ export const SCENARIOS: SimulationScenario[] = [
             maxMintWeekly: 10_000_000, // Excessive printing
             demandType: 'consistent', // Flat demand
             burnPct: 0.1, // Low burn
-            kMintPrice: 0.8 // High sensitivity to dilution
+            kMintPrice: 0.8, // High sensitivity to dilution
+            investorSellPct: 0, // Reset
+            growthCallEventPct: 0,
+            competitorYield: 0,
+            macro: 'neutral'
         }
     },
     {
@@ -49,7 +56,10 @@ export const SCENARIOS: SimulationScenario[] = [
         params: {
             churnThreshold: 50, // Providers leave easily
             competitorYield: 2.0, // 200% advantage
-            revenueStrategy: 'reserve' // Active treasury defense
+            revenueStrategy: 'reserve', // Active treasury defense
+            investorSellPct: 0, // Reset
+            growthCallEventPct: 0,
+            macro: 'bearish'
         }
     },
     {
@@ -62,7 +72,10 @@ export const SCENARIOS: SimulationScenario[] = [
         params: {
             growthCallEventWeek: 20,
             growthCallEventPct: 0.5, // +50% instant growth
-            demandType: 'growth' // Assume organic demand is growing, but maybe not fast enough
+            demandType: 'growth', // Assume organic demand is growing
+            investorSellPct: 0, // Reset
+            competitorYield: 0,
+            macro: 'bullish'
         }
     }
 ];

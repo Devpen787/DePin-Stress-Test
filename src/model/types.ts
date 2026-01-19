@@ -8,7 +8,7 @@
 // ============================================================================
 
 export type DemandType = 'consistent' | 'high-to-decay' | 'growth' | 'volatile';
-export type MacroCondition = 'bearish' | 'bullish' | 'sideways';
+export type MacroCondition = 'bearish' | 'bullish' | 'sideways' | 'neutral';
 export type ThesisScenario = 'baseline' | 'winter' | 'saturation' | 'utility';
 export type ViewMode = 'sandbox' | 'comparison' | 'explorer';
 

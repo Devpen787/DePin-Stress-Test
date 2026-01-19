@@ -64,7 +64,7 @@ function getDuneApiKey(): string | null {
   if (typeof process !== 'undefined' && process.env?.DUNE_API_KEY) {
     return process.env.DUNE_API_KEY;
   }
-  
+
   // Check localStorage for saved key
   try {
     return localStorage.getItem('dune_api_key');
@@ -89,7 +89,7 @@ export function saveDuneApiKey(key: string): void {
  */
 export async function executeDuneQuery(queryId: number): Promise<DuneQueryResult | null> {
   const apiKey = getDuneApiKey();
-  
+
   if (!apiKey) {
     console.warn('Dune API key not configured. Set DUNE_API_KEY or call saveDuneApiKey()');
     return null;
@@ -116,10 +116,10 @@ export async function executeDuneQuery(queryId: number): Promise<DuneQueryResult
     // Poll for results
     let attempts = 0;
     const maxAttempts = 30;
-    
+
     while (attempts < maxAttempts) {
       await new Promise(resolve => setTimeout(resolve, 2000));
-      
+
       const statusResponse = await fetch(`${DUNE_API_BASE}/execution/${executionId}/status`, {
         headers: { 'X-Dune-API-Key': apiKey },
       });
@@ -127,7 +127,7 @@ export async function executeDuneQuery(queryId: number): Promise<DuneQueryResult
       if (!statusResponse.ok) continue;
 
       const statusData = await statusResponse.json();
-      
+
       if (statusData.state === 'QUERY_STATE_COMPLETED') {
         // Get results
         const resultsResponse = await fetch(`${DUNE_API_BASE}/execution/${executionId}/results`, {
@@ -169,7 +169,7 @@ export async function executeDuneQuery(queryId: number): Promise<DuneQueryResult
  */
 export async function getLatestDuneResults(queryId: number): Promise<DuneQueryResult | null> {
   const apiKey = getDuneApiKey();
-  
+
   if (!apiKey) {
     return null;
   }
@@ -204,7 +204,7 @@ export function parseOnocoyMetrics(results: DuneQueryResult): OnChainMetrics | n
   }
 
   const row = results.data.rows[0];
-  
+
   return {
     tokenBurned24h: Number(row.token_burned_24h) || 0,
     tokenBurned7d: Number(row.token_burned_7d) || 0,
@@ -286,6 +286,21 @@ export function getMockOnChainMetrics(protocol: string): OnChainMetrics {
         avgRewardPerNode: 18.9,
         networkUptime: 99.8,
       };
+    case 'geodnet':
+      return {
+        ...baseMetrics,
+        tokenBurned24h: 200000,
+        tokenBurned7d: 1400000,    // ~200k/day (high burn model)
+        tokenBurnedTotal: 25000000,
+        revenueUSD24h: 12000,
+        revenueUSD7d: 84000,       // ~$4.3M annualized
+        activeNodes24h: 12500,
+        activeNodesTotal: 13000,   // ~13k active stations
+        transactionCount24h: 50000,
+        uniqueUsers24h: 2500,
+        avgRewardPerNode: 2.5,
+        networkUptime: 99.5,
+      };
     default:
       return baseMetrics;
   }
@@ -310,13 +325,13 @@ export interface DuneStatus {
 
 export function getDuneStatus(): DuneStatus {
   const configured = isDuneConfigured();
-  
+
   return {
     configured,
     lastQuery: null, // Would track this in production
     queriesRemaining: configured ? null : 0, // API would return this
-    message: configured 
-      ? 'Dune Analytics connected' 
+    message: configured
+      ? 'Dune Analytics connected'
       : 'Add your Dune API key to enable on-chain metrics',
   };
 }

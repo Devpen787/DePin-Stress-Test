@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
   Scale, BookOpen, Activity, RefreshCw, Layers, Settings2, Download, Search, GitCompare, LayoutGrid, Play, Zap
@@ -14,6 +14,9 @@ import { MethodologyDrawer } from './src/components/MethodologyDrawer';
 import { MethodologySheet } from './src/components/MethodologySheet';
 import { HeaderDropdown, DropdownItem, DropdownToggle, DropdownDivider } from './src/components/ui/HeaderDropdown';
 
+// Benchmark View
+import { BenchmarkView } from './src/components/Benchmark/BenchmarkView';
+
 // Simulator Components
 import { SandboxView } from './src/components/Simulator/SandboxView';
 import { ComparisonView } from './src/components/Simulator/ComparisonView';
@@ -25,14 +28,16 @@ import { calculateRegime } from './src/utils/regime';
 import { getMockOnChainMetrics, type OnChainMetrics } from './src/services/dune';
 import { fetchMultipleTokens, type TokenMarketData, ALL_DEPIN_TOKEN_IDS, getTimeUntilNextRefresh, autoRefreshManager } from './src/services/coingecko';
 import { SolanaVerifier, type NetworkStatus } from './src/model/solana';
+import { useProtocolMetrics } from './src/hooks/useProtocolMetrics'; // Import Hook
 import { PROTOCOL_PROFILES } from './src/data/protocols';
+import { PEER_GROUPS } from './src/data/peerGroups';
 
 const App: React.FC = () => {
   // Use Custom Hook for Simulation Logic
   const sim = useSimulationRunner();
 
   // --- UI STATE ---
-  const [activeTab, setActiveTab] = useState<'simulator' | 'thesis' | 'case_study'>('simulator');
+  const [activeTab, setActiveTab] = useState<'simulator' | 'thesis' | 'case_study' | 'benchmark'>('simulator');
   const [activeScenarioId, setActiveScenarioId] = useState<string | null>(null);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
     stress: false, competitive: false, scenarios: true, tokenomics: true, advanced: true, providers: true, simulation: true,
@@ -54,16 +59,11 @@ const App: React.FC = () => {
   const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(false);
   const [timeUntilRefresh, setTimeUntilRefresh] = useState<string>('');
   const [allDePINData, setAllDePINData] = useState<Record<string, TokenMarketData>>({});
-  const [onChainMetrics, setOnChainMetrics] = useState<Record<string, OnChainMetrics>>({});
+  // REMOVED: onChainMetrics state (replaced by hook)
   const [networkStatus, setNetworkStatus] = useState<NetworkStatus | null>(null);
-  const [useNewModel, setUseNewModel] = useState(true); // Assuming this influences sim somehow, but currently local to component or prop?
-  // Note: useSimulationRunner has its own 'useNewModel', we might need to sync or pass it. 
-  // checking hook... hook has internal useNewModel state. Ideally we expose setUseNewModel from hook if we want header to control it.
-  // Actually, hook has it. Let's assume we can add it to hook return if needed. 
-  // For now, let's look at hook again. I returned `derivedMetrics` etc but not `setUseNewModel`. 
-  // I will just add it to the hook return type implicitly or edit hook if strictly needed. 
-  // Reviewing hook: `const [useNewModel, setUseNewModel] = useState(true);` is inside hook. 
-  // I should probably expose it. For this pass, I'll assume I can access it or I'll quickly patch hook if it breaks.
+  const { useNewModel, setUseNewModel } = sim;
+  const priorViewMode = useRef(sim.viewMode);
+  const priorSelected = useRef(sim.selectedProtocolIds);
 
   // --- ACTIONS ---
 
@@ -111,16 +111,17 @@ const App: React.FC = () => {
 
   // --- EFFECTS ---
 
+  // NEW: Unified Protocol Metrics Hook (Dune + Snapshots)
+  const profiles = PROTOCOL_PROFILES; // Ensure scope validity
+  const { metrics: onChainMetrics, loading: protocolsLoading } = useProtocolMetrics(
+    profiles.map(p => p.metadata.id)
+  );
+
   useEffect(() => {
-    // Initial Loads (Mock Chain, Network Status, etc)
-    setOnChainMetrics({
-      'ono_v3_calibrated': getMockOnChainMetrics('onocoy'),
-      'helium_bme_v1': getMockOnChainMetrics('helium'),
-      'adaptive_elastic_v1': getMockOnChainMetrics('render'),
-    });
+    // Initial Loads (Network Status)
     SolanaVerifier.getNetworkStatus().then(setNetworkStatus);
 
-    // Auto-refresh logic
+    // Auto-refresh logic (CoinGecko)
     if (autoRefreshEnabled) {
       autoRefreshManager.start(fetchLiveData, 5 * 60 * 1000);
     } else {
@@ -128,6 +129,28 @@ const App: React.FC = () => {
     }
     return () => autoRefreshManager.stop();
   }, [autoRefreshEnabled]);
+
+  useEffect(() => {
+    if (activeTab === 'benchmark') {
+      priorViewMode.current = sim.viewMode;
+      priorSelected.current = sim.selectedProtocolIds;
+
+      const benchmarkGroup = PEER_GROUPS[0];
+      sim.setViewMode('benchmark');
+      if (benchmarkGroup) {
+        sim.setSelectedProtocolIds(benchmarkGroup.members);
+      }
+      sim.runSimulation();
+      return;
+    }
+
+    if (sim.viewMode === 'benchmark') {
+      sim.setViewMode(priorViewMode.current || 'sandbox');
+      if (priorSelected.current?.length) {
+        sim.setSelectedProtocolIds(priorSelected.current);
+      }
+    }
+  }, [activeTab]);
 
   const incentiveRegime = React.useMemo(() => calculateRegime(sim.aggregated, sim.activeProfile), [sim.aggregated, sim.activeProfile]);
 
@@ -148,12 +171,14 @@ const App: React.FC = () => {
           </div>
 
           <div className="flex p-1 bg-slate-900 rounded-xl border border-slate-800">
-            {['simulator', 'thesis', 'case_study'].map((tab) => (
+            {['simulator', 'benchmark', 'thesis', 'case_study'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab as any)}
                 className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === tab
-                  ? tab === 'simulator' ? 'bg-indigo-600 text-white shadow-lg' : tab === 'thesis' ? 'bg-emerald-600 text-white shadow-lg' : 'bg-orange-500 text-white shadow-lg'
+                  ? tab === 'simulator' ? 'bg-indigo-600 text-white shadow-lg' :
+                    tab === 'benchmark' ? 'bg-indigo-600 text-white shadow-lg' :
+                      tab === 'thesis' ? 'bg-emerald-600 text-white shadow-lg' : 'bg-orange-500 text-white shadow-lg'
                   : 'text-slate-500 hover:text-slate-300'
                   }`}
               >
@@ -221,7 +246,22 @@ const App: React.FC = () => {
       </header>
 
       {/* MAIN CONTENT AREA */}
-      {activeTab === 'case_study' ? (
+      {activeTab === 'benchmark' ? (
+        <div className="flex-1 overflow-y-auto bg-slate-950 p-6 custom-scrollbar">
+          <BenchmarkView
+            params={sim.params}
+            setParams={sim.setParams}
+            multiAggregated={sim.multiAggregated}
+            profiles={PROTOCOL_PROFILES}
+            liveData={liveData}
+            onChainData={onChainMetrics}
+            engineLabel={useNewModel ? 'Agent-Based v2' : 'Legacy v1.2'}
+            lastLiveDataFetch={lastLiveDataFetch}
+            loading={sim.loading}
+            activeScenarioId={activeScenarioId}
+          />
+        </div>
+      ) : activeTab === 'case_study' ? (
         <TokenomicsStudy />
       ) : activeTab === 'thesis' ? (
         <ThesisDashboard
@@ -323,4 +363,3 @@ const App: React.FC = () => {
 const container = document.getElementById('root');
 const root = createRoot(container!);
 root.render(<App />);
-

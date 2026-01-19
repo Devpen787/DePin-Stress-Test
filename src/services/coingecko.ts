@@ -60,6 +60,7 @@ export const COINGECKO_TOKEN_IDS: Record<string, string> = {
   'dimo_v1': 'dimo',
   'hivemapper_v1': 'hivemapper',
   'theta_v1': 'theta-token',
+  'geodnet_v1': 'geodnet',
 };
 
 // Comprehensive DePIN token database
@@ -176,6 +177,14 @@ export const DEPIN_TOKENS: Record<string, DePINTokenInfo> = {
     coingeckoId: 'dimo',
     description: 'User-owned vehicle data network',
     website: 'https://dimo.zone',
+  },
+  'geodnet': {
+    name: 'Geodnet',
+    symbol: 'GEOD',
+    category: 'Location/GNSS',
+    coingeckoId: 'geodnet',
+    description: 'Decentralized GNSS Reference Network',
+    website: 'https://geodnet.com',
   },
 
   'arweave': {
